@@ -34,9 +34,11 @@ in stdenv.mkDerivation rec {
     xorg.libXext
     xorg.libXcursor
     xorg.libXrandr
+    pkgs.vulkan-loader
   ];
 
   shellHook = ''
     export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$APPEND_LIBRARY_PATH"
   '';
 }
+
