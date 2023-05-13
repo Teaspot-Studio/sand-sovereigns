@@ -36,7 +36,9 @@ in stdenv.mkDerivation rec {
     xorg.libXrandr
   ];
 
-  shellHook = ''
-    export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$APPEND_LIBRARY_PATH"
-  '';
+  shellHook = ''export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${pkgs.lib.makeLibraryPath [
+    pkgs.alsaLib
+    pkgs.udev
+    pkgs.vulkan-loader
+  ]}"'';
 }
