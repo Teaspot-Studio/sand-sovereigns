@@ -20,7 +20,28 @@ in
 naersk.buildPackage {
   name = "sand-sovereigns";
   root = pkgs.lib.sourceFilesBySuffices ./. [".rs" ".toml" ".lock" ".html" ".css" ".png" ".sh" ".sql"];
-  buildInputs = with pkgs; [ sqlx-cli openssl pkgconfig clang llvm llvmPackages.libclang zlib cacert curl postgresql ];
+  buildInputs = with pkgs; [
+    openssl
+    pkgconfig
+    clang
+    llvm
+    llvmPackages.libclang
+    zlib
+    cacert
+    curl
+    alsa-lib
+    libudev-zero
+    xorg.libX11
+    xorg.libXi
+    xorg.libXinerama
+    xorg.libXext
+    xorg.libXcursor
+    xorg.libXrandr
+    libGL
+  ];
   LIBCLANG_PATH = "${pkgs.llvmPackages.libclang}/lib";
   OPENSSL_DIR = "${merged-openssl}";
+  postInstall = ''
+    cp -r ${./assets} $out/bin/assets
+  '';
 }
