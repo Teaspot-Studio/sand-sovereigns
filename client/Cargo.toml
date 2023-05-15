@@ -1,0 +1,12 @@
+[package]
+name = "sand-sovereigns"
+version = "0.1.0"
+edition = "2021"
+description = "Real time strategy in your browser"
+repository = "https://github.com/Teaspot-Studio/sand-sovereigns"
+license = "MIT"
+
+[dependencies]
+bevy = "0.10.1"
+
+[dev-dependencies] 
