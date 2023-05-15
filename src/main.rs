@@ -1,65 +1,121 @@
-//! Renders an animated sprite by loading all animation frames from a single image (a sprite sheet)
-//! into a texture atlas, and changing the displayed image periodically.
+//! This example demonstrates the built-in 3d shapes in Bevy.
+//! The scene includes a patterned texture and a rotation for visualizing the normals and UVs.
 
-use bevy::prelude::*;
+use std::f32::consts::PI;
+
+use bevy::{
+    prelude::*,
+    render::render_resource::{Extent3d, TextureDimension, TextureFormat},
+};
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest())) // prevents blurry sprites
+        .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
         .add_startup_system(setup)
-        .add_system(animate_sprite)
+        .add_system(rotate)
         .run();
 }
 
+/// A marker component for our shapes so we can query them separately from the ground plane
 #[derive(Component)]
-struct AnimationIndices {
-    first: usize,
-    last: usize,
-}
+struct Shape;
 
-#[derive(Component, Deref, DerefMut)]
-struct AnimationTimer(Timer);
-
-fn animate_sprite(
-    time: Res<Time>,
-    mut query: Query<(
-        &AnimationIndices,
-        &mut AnimationTimer,
-        &mut TextureAtlasSprite,
-    )>,
-) {
-    for (indices, mut timer, mut sprite) in &mut query {
-        timer.tick(time.delta());
-        if timer.just_finished() {
-            sprite.index = if sprite.index == indices.last {
-                indices.first
-            } else {
-                sprite.index + 1
-            };
-        }
-    }
-}
+const X_EXTENT: f32 = 14.5;
 
 fn setup(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut images: ResMut<Assets<Image>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let texture_handle = asset_server.load("texture/gabe.png");
-    let texture_atlas =
-        TextureAtlas::from_grid(texture_handle, Vec2::new(24.0, 24.0), 7, 1, None, None);
-    let texture_atlas_handle = texture_atlases.add(texture_atlas);
-    // Use only the subset of sprites in the sheet that make up the run animation
-    let animation_indices = AnimationIndices { first: 1, last: 6 };
-    commands.spawn(Camera2dBundle::default());
-    commands.spawn((
-        SpriteSheetBundle {
-            texture_atlas: texture_atlas_handle,
-            sprite: TextureAtlasSprite::new(animation_indices.first),
-            transform: Transform::from_scale(Vec3::splat(6.0)),
+    let debug_material = materials.add(StandardMaterial {
+        base_color_texture: Some(images.add(uv_debug_texture())),
+        ..default()
+    });
+
+    let shapes = [
+        meshes.add(shape::Cube::default().into()),
+        meshes.add(shape::Box::default().into()),
+        meshes.add(shape::Capsule::default().into()),
+        meshes.add(shape::Torus::default().into()),
+        meshes.add(shape::Cylinder::default().into()),
+        meshes.add(shape::Icosphere::default().try_into().unwrap()),
+        meshes.add(shape::UVSphere::default().into()),
+    ];
+
+    let num_shapes = shapes.len();
+
+    for (i, shape) in shapes.into_iter().enumerate() {
+        commands.spawn((
+            PbrBundle {
+                mesh: shape,
+                material: debug_material.clone(),
+                transform: Transform::from_xyz(
+                    -X_EXTENT / 2. + i as f32 / (num_shapes - 1) as f32 * X_EXTENT,
+                    2.0,
+                    0.0,
+                )
+                .with_rotation(Quat::from_rotation_x(-PI / 4.)),
+                ..default()
+            },
+            Shape,
+        ));
+    }
+
+    commands.spawn(PointLightBundle {
+        point_light: PointLight {
+            intensity: 9000.0,
+            range: 100.,
+            shadows_enabled: true,
             ..default()
         },
-        animation_indices,
-        AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
-    ));
+        transform: Transform::from_xyz(8.0, 16.0, 8.0),
+        ..default()
+    });
+
+    // ground plane
+    commands.spawn(PbrBundle {
+        mesh: meshes.add(shape::Plane::from_size(50.0).into()),
+        material: materials.add(Color::SILVER.into()),
+        ..default()
+    });
+
+    commands.spawn(Camera3dBundle {
+        transform: Transform::from_xyz(0.0, 6., 12.0).looking_at(Vec3::new(0., 1., 0.), Vec3::Y),
+        ..default()
+    });
+}
+
+fn rotate(mut query: Query<&mut Transform, With<Shape>>, time: Res<Time>) {
+    for mut transform in &mut query {
+        transform.rotate_y(time.delta_seconds() / 2.);
+    }
+}
+
+/// Creates a colorful test pattern
+fn uv_debug_texture() -> Image {
+    const TEXTURE_SIZE: usize = 8;
+
+    let mut palette: [u8; 32] = [
+        255, 102, 159, 255, 255, 159, 102, 255, 236, 255, 102, 255, 121, 255, 102, 255, 102, 255,
+        198, 255, 102, 198, 255, 255, 121, 102, 255, 255, 236, 102, 255, 255,
+    ];
+
+    let mut texture_data = [0; TEXTURE_SIZE * TEXTURE_SIZE * 4];
+    for y in 0..TEXTURE_SIZE {
+        let offset = TEXTURE_SIZE * y * 4;
+        texture_data[offset..(offset + TEXTURE_SIZE * 4)].copy_from_slice(&palette);
+        palette.rotate_right(4);
+    }
+
+    Image::new_fill(
+        Extent3d {
+            width: TEXTURE_SIZE as u32,
+            height: TEXTURE_SIZE as u32,
+            depth_or_array_layers: 1,
+        },
+        TextureDimension::D2,
+        &texture_data,
+        TextureFormat::Rgba8UnormSrgb,
+    )
 }
