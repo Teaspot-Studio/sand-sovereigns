@@ -8,5 +8,6 @@ license = "MIT"
 
 [dependencies]
 bevy = "0.10.1"
+ss-voxel = { path = "../ss-voxel" }
 
 [dev-dependencies] 

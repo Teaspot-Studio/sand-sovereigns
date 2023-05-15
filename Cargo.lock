@@ -2597,6 +2597,7 @@ name = "sand-sovereigns"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "ss-voxel",
 ]
 
 [[package]]
@@ -2697,6 +2698,9 @@ dependencies = [
 [[package]]
 name = "ss-voxel"
 version = "0.1.0"
+dependencies = [
+ "bevy",
+]
 
 [[package]]
 name = "static_assertions"
